@@ -163,6 +163,13 @@ foreach($records as $record)
 	</tr>';
 }
 
+// If you have no records present
+if(!$records)
+{
+	echo '
+	<tr><td colspan="6">You have no transaction history at this time.</td></tr>';
+}
+
 echo '
 </table>';
 

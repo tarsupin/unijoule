@@ -15,4 +15,35 @@ class AppCredits_config {
 	
 	public $data = array();
 	
+	
+/****** Install this plugin ******/
+	public function install (
+	)			// <bool> RETURNS TRUE on success, FALSE on failure.
+	
+	// $plugin->install();
+	{
+		Database::exec("
+		CREATE TABLE IF NOT EXISTS `credits`
+		(
+			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			`amount`				float(12,4)		unsigned	NOT NULL	DEFAULT '0.0000',
+			
+			UNIQUE (`auth_id`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+		");
+		
+		return $this->isInstalled();
+	}
+	
+	
+/****** Check if the plugin was successfully installed ******/
+	public static function isInstalled (
+	)			// <bool> TRUE if successfully installed, FALSE if not.
+	
+	// $plugin->isInstalled();
+	{
+		// Make sure the newly installed tables exist
+		return DatabaseAdmin::columnsExist("credits", array("auth_id", "amount"));
+	}
+	
 }
