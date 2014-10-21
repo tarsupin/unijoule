@@ -40,12 +40,31 @@ echo '
 
 <h2 style="font-weight:normal;">Buy UniJoule &nbsp; &nbsp; <span style="color:#57c2c1;">$1.00 = 1.00 UniJoule</span></h2>
 
-<p>
-	Get 5% free UniJoule with $20 or more<br />
-	Get 10% free UniJoule with $50 or more
-</p>
+Converting USD to UniJoule is a 1:1 exchange. That is, $1.00 for 1.00 UniJoule.<br /><br />
 
-<img src="/assets/images/paypal_cards.png" />
+<form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+<input type="hidden" name="cmd" value="_s-xclick">
+<input type="hidden" name="hosted_button_id" value="2J6QZSMJ24EVE">
+<table>
+<tr><td><input type="hidden" name="on0" value="UniJoule">UniJoule</td></tr><tr><td><select name="os0">
+	<option value="5 UniJoule">5 UniJoule</option>
+	<option value="10 UniJoule">10 UniJoule</option>
+	<option value="15 UniJoule">15 UniJoule</option>
+	<option value="20 UniJoule (+1 for free)">20 UniJoule (+1 for free)</option>
+	<option value="30 UniJoule (+1.5 for free)">30 UniJoule (+1.5 for free)</option>
+	<option value="50 UniJoule (+5 for free)">50 UniJoule (+5 for free)</option>
+	<option value="100 UniJoule (+10 for free)">100 UniJoule (+10 for free)</option>
+	<option value="200 UniJoule (+20 for free)">200 UniJoule (+20 for free)</option>
+</select> </td></tr>
+</table>
+
+<br />
+<input type="hidden" name="currency_code" value="USD">
+<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+<img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+</form>
+
+<br /><br />* UniJoule (n): a unit of energy equal to the effort of a group of people working toward a unified goal.
 
 </div>';
 

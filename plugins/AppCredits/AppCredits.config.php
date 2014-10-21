@@ -29,7 +29,26 @@ class AppCredits_config {
 			`amount`				float(12,4)		unsigned	NOT NULL	DEFAULT '0.0000',
 			
 			UNIQUE (`auth_id`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8 ;
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (auth_id) PARTITIONS 7;
+		");
+		
+		Database::exec("
+		CREATE TABLE IF NOT EXISTS `credit_purchases`
+		(
+			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			`uni_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			
+			`txn_id`				varchar(22)					NOT NULL	DEFAULT '',
+			`payment_status`		varchar(12)					NOT NULL	DEFAULT '',
+			`email`					varchar(85)					NOT NULL	DEFAULT '',
+			
+			`amount_paid`			float(8,2)		unsigned	NOT NULL	DEFAULT '0.00',
+			`credits_provided`		float(8,2)		unsigned	NOT NULL	DEFAULT '0.00',
+			
+			`date_paid`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			
+			INDEX (`auth_id`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (auth_id) PARTITIONS 13;
 		");
 		
 		return $this->isInstalled();
@@ -43,7 +62,10 @@ class AppCredits_config {
 	// $plugin->isInstalled();
 	{
 		// Make sure the newly installed tables exist
-		return DatabaseAdmin::columnsExist("credits", array("auth_id", "amount"));
+		$pass1 = DatabaseAdmin::columnsExist("credits", array("auth_id", "amount"));
+		$pass2 = DatabaseAdmin::columnsExist("credits_purchases", array("auth_id", "uni_id", "amount"));
+		
+		return ($pass1 and $pass2);
 	}
 	
 }

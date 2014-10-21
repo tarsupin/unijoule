@@ -4,15 +4,13 @@
 header('HTTP/1.1 200 OK');
 
 // Assign payment notification values to local variables
-$item_name			= $_POST['item_name'];
-$item_number		= $_POST['item_number'];
-$payment_status		= $_POST['payment_status'];
-$payment_amount		= $_POST['mc_gross'];
-$payment_currency	= $_POST['mc_currency'];
-$txn_id				= $_POST['txn_id'];
-$receiver_email		= $_POST['receiver_email'];
-$payer_email		= $_POST['payer_email'];
-$uniID				= $_POST['custom'];
+$payment_status		= Sanitize::variable($_POST['payment_status']);
+$payment_amount		= (float) $_POST['mc_gross'];
+$payment_currency	= Sanitize::variable($_POST['mc_currency']);
+$txn_id				= Sanitize::variable($_POST['txn_id']);
+$receiver_email		= Sanitize::email($_POST['receiver_email']);
+$payer_email		= Sanitize::email($_POST['payer_email']);
+$uniID				= (int) $_POST['custom'];
 
 // Build the required acknowledgement message out of the notification just received
 $req = 'cmd=_notify-validate';    // Add 'cmd=_notify-validate' to beginning of the acknowledgement
@@ -41,44 +39,75 @@ while (!feof($fp))
 	$res = fgets($fp, 1024);	// Get the acknowledgement response
 	
 	// Response was valid, proceed with payment processing successful
-	if (strcmp ($res, "VERIFIED") == 0)
+	if(strcmp ($res, "VERIFIED") == 0)
 	{
-		// Possible processing steps for a payment include the following:
+		// Can check for txn_type here.
+		// https://developer.paypal.com/docs/classic/ipn/integration-guide/IPNandPDTVariables/
 		
 		// Check that the payment_status is Completed
-		// Check that txn_id has not been previously processed
-		// Check that receiver_email is your Primary PayPal email
-		// Check that payment_amount/payment_currency are correct
-		// Process payment
-		
-		// check whether the payment_status is Completed
 		if($payment_status == "Completed")
 		{
+			// Check that txn_id has not been previously processed
+			//
+			
+			// Check that receiver_email is your Primary PayPal email
+			//
+			
+			// Check that payment_amount/payment_currency are correct
+			//
+			
 			// Credits Worth
 			$credits = 0;
 			
-			if($payment_amount >= 20) { $credits = floor($payment_amount * 1.1); }
-			elseif($payment_amount >= 5) { $credits = floor($payment_amount * 1); }
+			if($payment_amount >= 50)
+			{
+				$credits = (float) $payment_amount * 1.10;
+			}
+			else if($payment_amount >= 20)
+			{
+				$credits = (float) $payment_amount * 1.05;
+			}
+			else if($payment_amount >= 5)
+			{
+				$credits = (float) $payment_amount * 1;
+			}
 			
 			// Get the Auth ID of the Uni-ID
 			if($chkAuthID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($uniID)))
 			{
-				// Add the database result
-				Database::query("INSERT INTO `credit_purchases` (auth_id, uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?)", array($chkAuthID, $uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits));
+				Database::startTransaction();
 				
-				// Add to the user's credits (if applicable)
-				if($credits > 0)
+				// Record the purchase
+				if($pass = Database::query("INSERT INTO `credit_purchases` (auth_id, uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", array($chkAuthID, $uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
 				{
+					// Add to the user's credits
 					$transactionID = AppTransactions::add($chkAuthID, $uniID, $credits, "Purchased Credits.");
-					$balance = AppTransactions::$recipientBalance;
 					
-					if($balance != false)
+					if(AppTransactions::$recipientBalance == false)
 					{
-						Database::query("UPDATE credit_purchases SET user_received=1 WHERE user_id=? LIMIT 1", array($uniID));
+						$pass = false;
 					}
 				}
+				
+				Database::endTransaction($pass);
 			}
 		}
+		
+		/*
+			Other payment statuses possible:
+			
+			Canceled_Reversal
+			Denied
+			Expired
+			Failed
+			In-Progress
+			Partially_Refunded
+			Pending
+			Processed
+			Refunded
+			Reversed
+			Voided
+		*/
 	}
 	
 	// The request was invalid

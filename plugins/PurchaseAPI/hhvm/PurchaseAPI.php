@@ -4,7 +4,7 @@
 ------ About this API ------
 ----------------------------
 
-This API allows users to purchase items on other sties using TeslaCoin.
+This API allows users to purchase items on other sites using UniJoule.
 
 
 ------------------------------
