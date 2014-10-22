@@ -223,18 +223,18 @@ abstract class AppTransactions {
 	}
 	
 	
-/****** The server takes credits from a user ******/
+/****** Subtract UniJoule from a User (to the Server) ******/
 	public static function subtract
 	(
-		int $senderAuthID		// <int> The Auth ID of the user spending credits.
-	,	int $senderUniID		// <int> The Uni-Profile of the user spending credits.
-	,	float $amount				// <float> Sets how many credits to exchange.
+		int $senderAuthID		// <int> The Auth ID of the user spending UniJoule.
+	,	int $senderUniID		// <int> The UniID of the user spending UniJoule.
+	,	float $amount				// <float> Sets how many UniJoule to exchange.
 	,	string $desc = ""			// <str> The description of the transaction, if applicable.
 	,	string $siteHandle = ""	// <str> The site handle of the site responsible for this transaction.
 	,	bool $applyFee = true	// <bool> TRUE to apply a fee, FALSE to not apply a fee.
 	): int						// RETURNS <int> The Transaction ID, or 0 on failure.
 	
-	// $transactionID = AppTransactions::subtract($senderAuthID, $senderUniID, 2.50, "Sent 2.50 to the server.", $siteHandle, [$applyFee]);
+	// $transactionID = AppTransactions::subtract($senderAuthID, $senderUniID, 2.50, "Sent 2.50 to the server.", $siteHandle, [$applyFee], [$giftcardCode]);
 	{
 		self::reset();
 		
@@ -274,7 +274,97 @@ abstract class AppTransactions {
 		// Get the new balances
 		self::$senderBalance -= ($amount + $fee);
 		
-		// Run the transaction
+		// Record the transaction
+		Database::query("INSERT INTO `credits_transactions` (`sender_auth_id`, `sender_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?, ?)", array($senderAuthID, $senderUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
+		
+		// Get the Transaction ID
+		if(!$transactionID = Database::$lastID)
+		{
+			self::$error = "Error trying to interpret the transaction ID.";
+			Database::endTransaction(false);
+			return 0;
+		}
+		
+		// Record the Transaction
+		if(!$success = AppRecords::record($senderAuthID, $transactionID, true, self::$senderBalance))
+		{
+			self::$error = "Recording transaction was unsuccessful.";
+			Database::endTransaction(false);
+			return 0;
+		}
+		
+		// Commit the transaction
+		Database::endTransaction();
+		
+		return $transactionID;
+	}
+	
+	
+/****** Subtract UniJoule from a Gift Card (to the Server) ******/
+	public static function subtractFromGiftCard
+	(
+		string $giftcardCode		// <str> The code of the gift card being used.
+	,	float $amount				// <float> Sets how many UniJoule to exchange.
+	,	int $senderAuthID = 0	// <int> The Auth ID of the user spending UniJoule.
+	,	int $senderUniID = 0	// <int> The UniID of the user spending UniJoule.
+	,	string $desc = ""			// <str> The description of the transaction, if applicable.
+	,	string $siteHandle = ""	// <str> The site handle of the site responsible for this transaction.
+	,	bool $applyFee = true	// <bool> TRUE to apply a fee, FALSE to not apply a fee.
+	): int						// RETURNS <int> The Transaction ID, or 0 on failure.
+	
+	// $transactionID = AppTransactions::subtract($giftcardCode, $amount, $senderAuthID, $senderUniID, "Gift Card Purchase.", $siteHandle, [$applyFee]);
+	{
+		self::reset();
+		
+		// Get the data from the gift card
+		if(!$giftcardData = AppCredits::getGiftCardData($giftcardCode))
+		{
+			self::$error = "The gift card used is invalid."; return 0;
+		}
+		
+		// Recognize Variables
+		$giftcardData['credits'] = (float) $giftcardData['credits'];
+		
+		// Make sure the gift card has enough credits in it for this purchase
+		if($giftcardData['credits'] < $amount)
+		{
+			self::$error = "The gift card does not have enough funds available."; return 0;
+		}
+		
+		// Determine the fee for this transaction
+		$fee = ($applyFee ? self::calculateFee($amount) : 0.00);
+		
+		// Don't charge a fee if the gift card cannot afford it
+		if($giftcardData['credits']< ($amount + $fee))
+		{
+			$fee = 0.00;
+		}
+		
+		// Get the user's balance
+		self::$senderBalance = AppCredits::getBalance($senderAuthID);
+		
+		// Subtract the UniJoule - if not successful, return false
+		Database::startTransaction();
+		
+		if(!$success = Database::query("UPDATE credits SET amount=amount-? WHERE auth_id=? LIMIT 1", array(($amount + $fee), $senderAuthID)))
+		{
+			self::$error = "Couldn't process the transaction.";
+			Database::endTransaction(false);
+			return 0;
+		}
+		
+		// Get the new balances
+		$giftcardData['credits'] -= ($amount + $fee);
+		
+		// Update the Gift Card
+		if(!Database::query("UPDATE credits_giftcards SET credits=? WHERE giftcard_code=? LIMIT 1", array($giftcardData['credits'], $giftcardData['giftcard_code'])))
+		{
+			self::$error = "Unable to update the gift card properly.";
+			Database::endTransaction(false);
+			return 0;
+		}
+		
+		// Record the transaction
 		Database::query("INSERT INTO `credits_transactions` (`sender_auth_id`, `sender_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?, ?)", array($senderAuthID, $senderUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
 		
 		// Get the Transaction ID

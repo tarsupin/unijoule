@@ -10,7 +10,17 @@ $payment_currency	= Sanitize::variable($_POST['mc_currency']);
 $txn_id				= Sanitize::variable($_POST['txn_id']);
 $receiver_email		= Sanitize::email($_POST['receiver_email']);
 $payer_email		= Sanitize::email($_POST['payer_email']);
-$uniID				= (int) $_POST['custom'];
+$custom				= json_decode($_POST['custom'], true);
+
+// Prepare Values
+$uniID = (isset($custom['uni_id']) ? (int) $custom['uni_id'] : 0);
+$giftcardCode = "";
+
+// Prepare the Gift Card
+if(isset($custom['type']) and isset($custom['code']) and $custom['type'] == "giftcard")
+{
+	$giftcardCode = $custom['code'];
+}
 
 // Build the required acknowledgement message out of the notification just received
 $req = 'cmd=_notify-validate';    // Add 'cmd=_notify-validate' to beginning of the acknowledgement
@@ -72,24 +82,57 @@ while (!feof($fp))
 				$credits = (float) $payment_amount * 1;
 			}
 			
-			// Get the Auth ID of the Uni-ID
-			if($chkAuthID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($uniID)))
+			// If the user is purchasing a gift card
+			if($giftcardCode)
 			{
+				$chkAuthID = 0;
+				
+				if($uniID)
+				{
+					$chkAuthID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($uniID));
+				}
+				
 				Database::startTransaction();
 				
 				// Record the purchase
 				if($pass = Database::query("INSERT INTO `credit_purchases` (auth_id, uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", array($chkAuthID, $uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
 				{
-					// Add to the user's credits
-					$transactionID = AppTransactions::add($chkAuthID, $uniID, $credits, "Purchased Credits.");
-					
-					if(AppTransactions::$recipientBalance == false)
+					// Make sure no other gift card has the same code
+					if(!Database::selectValue("SELECT giftcard_code FROM credits_giftcards WHERE giftcard_code=? LIMIT 1", array($giftcardCode)))
+					{
+						// Add a Gift Card
+						$pass = Database::query("INSERT INTO credits_giftcards (giftcard_code, auth_id, uni_id, credits, email, date_purchased) VALUES (?, ?, ?, ?, ?, ?)", array($giftcardCode, $chkAuthID, $uniID, $credits, $payer_email, time()));
+					}
+					else
 					{
 						$pass = false;
 					}
 				}
 				
 				Database::endTransaction($pass);
+			}
+			
+			// If the user is adding UniJoule to their account
+			else if($uniID)
+			{
+				if($chkAuthID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($uniID)))
+				{
+					Database::startTransaction();
+					
+					// Record the purchase
+					if($pass = Database::query("INSERT INTO `credit_purchases` (auth_id, uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", array($chkAuthID, $uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
+					{
+						// Add to the user's credits
+						$transactionID = AppTransactions::add($chkAuthID, $uniID, $credits, "Purchased Credits.");
+						
+						if(AppTransactions::$recipientBalance == false)
+						{
+							$pass = false;
+						}
+					}
+					
+					Database::endTransaction($pass);
+				}
 			}
 		}
 		

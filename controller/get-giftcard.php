@@ -1,16 +1,22 @@
 <?php if(!defined("CONF_PATH")) { die("No direct script access allowed."); }
 
-// Make sure you're logged in, otherwise return home
-if(!Me::$loggedIn)
-{
-	Me::redirectLogin("/get-unijoules", "/");
-}
-
 // Run Global Script
 require(APP_PATH . "/includes/global.php");
 
+// Prepare the Gift Card code
+if(!isset($_SESSION[SITE_HANDLE]['giftcard-val']))
+{
+	$giftcardCode = Security::randHash(20, 62);
+	
+	$_SESSION[SITE_HANDLE]['giftcard-val'] = $giftcardCode;
+}
+else
+{
+	$giftcardCode = $_SESSION[SITE_HANDLE]['giftcard-val'];
+}
+
 // Prepare the custom value
-$customStr = json_encode(array("uni_id" => Me::$id));
+$customStr = json_encode(array("uni_id" => Me::$id, "type" => "giftcard", "code" => $giftcardCode));
 
 // Display the Header
 require(SYS_PATH . "/controller/includes/metaheader.php");
@@ -24,7 +30,7 @@ echo '
 <div id="panel-right"></div>
 <div id="content">' . Alert::display() . '
 
-<h2 style="font-weight:normal;">Buy UniJoule &nbsp; &nbsp; <span style="color:#57c2c1;">$1.00 = 1.00 UniJoule</span></h2>
+<h2 style="font-weight:normal;">Get a UniJoule GiftCard &nbsp; &nbsp; <span style="color:#57c2c1;">$1.00 = 1.00 UniJoule</span></h2>
 
 Converting USD to UniJoule is a 1:1 exchange. That is, $1.00 for 1.00 UniJoule.<br /><br />
 
@@ -32,8 +38,18 @@ Converting USD to UniJoule is a 1:1 exchange. That is, $1.00 for 1.00 UniJoule.<
 <input type="hidden" name="cmd" value="_s-xclick">
 <input type="hidden" name="custom" value=\'' . $customStr . '\'>
 <input type="hidden" name="hosted_button_id" value="2J6QZSMJ24EVE">
+<input type="hidden" name="currency_code" value="USD">
+
+<div>
+	<strong>The Gift Card Code</strong>
+	<p>
+		<input type="text" name="giftcard_code" value="' . $giftcardCode . '" style="width:95%;" readonly /><br />
+		<span style="font-size:0.9em;">Note: This code is used to access your gift card\'s funds. Do NOT lose this code, and do not share it with anyone else.</span>
+	</p>
+</div>
+
 <table>
-<tr><td><input type="hidden" name="on0" value="UniJoule"><strong>How many UniJoule would you like?</strong></td></tr><tr><td><select name="os0">
+<tr><td><input type="hidden" name="on0" value="UniJoule"><strong>How many UniJoule would you like on the Gift Card?</strong></td></tr><tr><td><select name="os0">
 	<option value="5 UniJoule">5 UniJoule</option>
 	<option value="10 UniJoule">10 UniJoule</option>
 	<option value="15 UniJoule">15 UniJoule</option>
@@ -45,14 +61,15 @@ Converting USD to UniJoule is a 1:1 exchange. That is, $1.00 for 1.00 UniJoule.<
 </select> </td></tr>
 </table>
 
-<input type="hidden" name="currency_code" value="USD">
-<input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+<div style="margin-top:22px;"><input type="submit" name="submit" value="Buy My Gift Card Now" /></div>
 <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
 </form>
 
 <br /><br />* UniJoule (n): a unit of energy equal to the effort of a group of people working toward a unified goal.
 
 </div>';
+
+// <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_buynowCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
 
 // Display the Footer
 require(SYS_PATH . "/controller/includes/footer.php");

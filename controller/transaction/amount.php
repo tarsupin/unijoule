@@ -64,7 +64,7 @@ $applyFee = (isset($trans['no_fee']) ? false : true);
 if($runTransaction)
 {
 	// Make sure the user is allowed to load this transaction
-	if(Me::$id != $trans['uni_id'])
+	if($trans['uni_id'] and Me::$id != $trans['uni_id'])
 	{
 		$runTransaction = false;
 		
@@ -133,8 +133,28 @@ if(Form::submitted("trans-amount-unijoule") and $runTransaction)
 		Alert::error("Invalid Amount", "You have provided more UniJoule than can be sent for this transaction.");
 	}
 	
-	// Make sure you have enough UniJoule for this transaction
-	if($amt > $balance)
+	// Prepare gift card usage
+	$giftcardCode = $_POST['giftcard_code'] ? $_POST['giftcard_code'] : "";
+	
+	if($giftcardCode)
+	{
+		// Check if the gift card exists and has sufficient UniJoule
+		$cardAmount = AppCredits::getGiftCardBalance($giftcardCode);
+		
+		if($cardAmount === false)
+		{
+			$giftcardCode = "";
+			Alert::warning("Invalid Card", "That gift card code is invalid.");
+		}
+		else if($cardAmount < $amt)
+		{
+			$giftcardCode = "";
+			Alert::warning("Low Funds on Card", "You do not have enough UniJoule on this gift card.");
+		}
+	}
+	
+	// Make sure you have enough UniJoule for this transaction (unless the giftcard didn't have enough)
+	if(!$giftcardCode and $amt > $balance)
 	{
 		Alert::error("Not Enough UniJoule", "You do not have enough UniJoule to complete this transaction.");
 	}
@@ -162,8 +182,15 @@ if(Form::submitted("trans-amount-unijoule") and $runTransaction)
 		// Check if the transaction API was successful
 		if($response = (bool) Connect::to($trans['site'], $trans['api'], $packet))
 		{
-			// If the transaction API ran successfully, we can run the transaction on this site
-			$transactionID = AppTransactions::subtract(Me::$vals['auth_id'], Me::$id, $amt, "Transaction", $trans['site'], $applyFee);
+			if($giftcardCode)
+			{
+				$transactionID = AppTransactions::subtractFromGiftCard($giftcardCode, $amt, Me::$vals['auth_id'], Me::$id, "Gift Card Transaction", $trans['site'], $applyFee);
+			}
+			else
+			{
+				// If the transaction API ran successfully, we can run the transaction on this site
+				$transactionID = AppTransactions::subtract(Me::$vals['auth_id'], Me::$id, $amt, "Transaction", $trans['site'], $applyFee);
+			}
 			
 			// Redirect back to the return URL
 			header("Location: " . $trans['return_url']); exit;
@@ -173,12 +200,6 @@ if(Form::submitted("trans-amount-unijoule") and $runTransaction)
 			Alert::error("Transaction Failure", "There was an error with the recipient site - the site may be offline.");
 		}
 	}
-}
-
-// Make sure you have enough to complete this transaction
-if(isset($trans['min_amount']) and $balance < $trans['min_amount'])
-{
-	Alert::warning("Requires More Credits", "You do not have enough UniJoule to complete this transaction.");
 }
 
 // Display the Header
@@ -237,7 +258,7 @@ if($runTransaction)
 		if($fixedAmount)
 		{
 			echo '
-			<div style="font-weight:bold; font-size:1.2em;">' . number_format($defaultAmount, 2) . ' UniJoule will be processed</div>';
+			<div style="font-weight:bold; font-size:1.2em;">' . number_format($defaultAmount, 2) . ' UniJoule will be deducted from your account</div>';
 		}
 		else
 		{
@@ -251,7 +272,11 @@ if($runTransaction)
 	}
 	
 	echo '
-		<p style="margin-top:22px;"><input type="submit" name="submit" value="Process Transaction" /></p>
+		<p style="margin-top:22px;">
+			<strong>[Optional] Pay with a UniJoule Gift Card</strong>
+			<input type="text" name="giftcard_code" value="" placeholder="Enter your gift card code here . . ." style="width:95%;" maxlength="20" />
+		</p>
+		<p style="margin-top:22px;"><input type="submit" name="submit" value="Approve Purchase" /></p>
 	</form>';
 }
 

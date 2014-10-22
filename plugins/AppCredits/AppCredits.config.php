@@ -51,6 +51,24 @@ class AppCredits_config {
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (auth_id) PARTITIONS 13;
 		");
 		
+		Database::exec("
+		CREATE TABLE IF NOT EXISTS `credits_giftcards`
+		(
+			`giftcard_code`			varchar(20)					NOT NULL	DEFAULT '',
+			
+			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			`uni_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			
+			`credits`				float(10,4)		unsigned	NOT NULL	DEFAULT '0.00',
+			
+			`email`					varchar(85)					NOT NULL	DEFAULT '',
+			`date_purchased`		int(10)			unsigned	NOT NULL	DEFAULT '0',
+			
+			UNIQUE (`giftcard_code`),
+			INDEX (`auth_id`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+		");
+		
 		return $this->isInstalled();
 	}
 	
