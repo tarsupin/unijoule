@@ -7,13 +7,8 @@ define("SYS_PATH", 		dirname(CONF_PATH) . "/system");
 // Load phpTesla
 require(SYS_PATH . "/phpTesla.php");
 
-// Initialize and Test Active User's Behavior
-Me::$getColumns = "*";	// Get all data from the "Me" class, so that we can retrieve "auth_id"
-
-if(Me::initialize())
-{
-	Me::runBehavior($url);
-}
+// Initialize Active User
+Me::initialize();
 
 // Determine which page you should point to, then load it
 require(SYS_PATH . "/routes.php");
