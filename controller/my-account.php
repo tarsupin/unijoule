@@ -7,7 +7,7 @@ if(!Me::$loggedIn)
 }
 
 // Get credit balance of the user
-$balance = AppCredits::getBalance(Me::$vals['auth_id']);
+$balance = AppCredits::getBalance(Me::$id);
 
 // Prepare Values
 $myHandle = Me::$vals['handle'];
@@ -25,9 +25,14 @@ if(Form::submitted("send-credits-frmcrd"))
 	// Validate the fields submitted
 	FormValidate::number_float("UniJoules to Send", $_POST['joules'], 0.01, (float) $balance);
 	
-	if(!$userData = User::getDataByHandle($_POST['handle'], "auth_id, uni_id, handle"))
+	if(!$userData = User::getDataByHandle($_POST['handle'], "uni_id, handle"))
 	{
-		if(!$userData = UserAuth::silentRegister($_POST['handle']))
+		if(!User::silentRegister($_POST['handle']))
+		{
+			Alert::error("Recipient", "That recipient does not exist.");
+		}
+		
+		if(!$userData = User::getDataByHandle($_POST['handle'], "uni_id, handle"))
 		{
 			Alert::error("Recipient", "That recipient does not exist.");
 		}
@@ -62,7 +67,7 @@ if(Form::submitted("send-credits-frmcrd"))
 }
 
 // Gather Transactions
-$records = AppRecords::get(Me::$vals['auth_id']);
+$records = AppRecords::get(Me::$id);
 
 // Get User Handles from Transactions
 $userSQL = "";

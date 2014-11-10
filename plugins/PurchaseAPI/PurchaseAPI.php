@@ -52,7 +52,7 @@ class PurchaseAPI extends API {
 		}
 		
 		// Prepare and Sanitize Values
-		$authID = 0;
+		$uniID = (int) $this->data['uni_id'];
 		$applyFee = (isset($this->data['apply_fee']) ? (bool) $this->data['apply_fee'] : false);
 		
 		$this->data['desc'] = isset($this->data['desc']) ? Sanitize::safeword($this->data['desc']) : '';
@@ -60,33 +60,23 @@ class PurchaseAPI extends API {
 		//$this->data['refund_duration'] = isset($this->data['allow_refund']) ? (int) $this->data['allow_refund'] : 0;
 		
 		// Check if the user is registered on this site
-		if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($this->data['uni_id'])))
+		if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($uniID)))
 		{
-			if(!$userData = UserAuth::silentRegister((int) $this->data['uni_id']))
+			if(!User::silentRegister($uniID))
 			{
-				$this->alert = "That user could not be not located.";
+				$this->alert = "The user could not be not located.";
 				return false;
 			}
 			
-			$this->data['uni_id'] = (int) $userData['uni_id'];
-			$authID = (int) $userData['auth_id'];
-		}
-		
-		// Get the Auth ID
-		if(!$authID)
-		{
-			$authID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($this->data['uni_id']));
-		}
-		
-		// If there is still no AuthID discovered, there's an error
-		if(!$authID)
-		{
-			$this->alert = "An error occurred when trying to verify the appropriate credentials.";
-			return false;
+			if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($uniID)))
+			{
+				$this->alert = "The user could not be not located.";
+				return false;
+			}
 		}
 		
 		// Run the Exchange
-		$transactionID = AppTransactions::subtract($authID, (int) $this->data['uni_id'], (float) $this->data['amount'], $this->data['desc'], $this->apiHandle, $applyFee);
+		$transactionID = AppTransactions::subtract($uniID, (float) $this->data['amount'], $this->data['desc'], $this->apiHandle, $applyFee);
 		
 		// Determine if there was an error or not - if so, set an alert
 		if(AppTransactions::$error !== "")

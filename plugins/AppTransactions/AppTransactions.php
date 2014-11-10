@@ -11,7 +11,7 @@ This plugin manages transactions, or exchanges of credits. It keeps track of tra
 ------ Methods Available ------
 -------------------------------
 
-list($sendBalance, $toBalance) = AppTransactions::exchange($senderUniID, $recipientUniID, $amount, $desc, [$siteHandle], [$senderAuthID], [$recipientAuthID])
+list($sendBalance, $toBalance) = AppTransactions::exchange($senderUniID, $recipientUniID, $amount, $desc, [$siteHandle])
 
 */
 
@@ -51,30 +51,8 @@ abstract class AppTransactions {
 			self::$error = "Must send a positive amount"; return 0;
 		}
 		
-		// Retrieve the AuthID of the Sender
-		if(!$authSender = User::get($senderUniID, "auth_id"))
-		{
-			if(!$authSender = UserAuth::silentRegister($senderUniID))
-			{
-				self::$error = "Unable to identify the sender."; return 0;
-			}
-		}
-		
-		// Retrieve the AuthID of the Recipient
-		if(!$authRecipient = User::get($recipientUniID, "auth_id"))
-		{
-			if(!$authRecipient = UserAuth::silentRegister($recipientUniID))
-			{
-				self::$error = "Unable to identify the recipient."; return 0;
-			}
-		}
-		
-		// Prepare Values
-		$senderAuthID = $authSender['auth_id'];
-		$recipientAuthID = $authRecipient['auth_id'];
-		
 		// Make sure the user isn't sending to themselves
-		if($recipientAuthID == $senderAuthID)
+		if($senderUniID == $recipientUniID)
 		{
 			self::$error = "Cannot send credits to yourself."; return 0;
 		}
@@ -83,12 +61,12 @@ abstract class AppTransactions {
 		$fee = self::calculateFee($amount);
 		
 		// Get the current amounts of each user (also confirms the users exist & creates their rows)
-		if(!$senderBalance = AppCredits::getBalance($senderAuthID))
+		if(!$senderBalance = AppCredits::getBalance($senderUniID))
 		{
 			self::$error = "Insufficient credits on sender's account."; return 0;
 		}
 		
-		$recipientBalance = AppCredits::getBalance($recipientAuthID);
+		$recipientBalance = AppCredits::getBalance($recipientUniID);
 		
 		if($recipientBalance === false)
 		{
@@ -114,8 +92,8 @@ abstract class AppTransactions {
 		// Add the credits - if not successful, return false
 		Database::startTransaction();
 		
-		$success1 = Database::query("UPDATE credits SET amount=amount-? WHERE auth_id=? LIMIT 1", array($amount + $fee, $senderAuthID));
-		$success2 = Database::query("UPDATE credits SET amount=amount+? WHERE auth_id=? LIMIT 1", array($amount, $recipientAuthID));
+		$success1 = Database::query("UPDATE credits SET amount=amount-? WHERE uni_id=? LIMIT 1", array($amount + $fee, $senderUniID));
+		$success2 = Database::query("UPDATE credits SET amount=amount+? WHERE uni_id=? LIMIT 1", array($amount, $recipientUniID));
 		
 		if(!$success1 or !$success2)
 		{
@@ -129,7 +107,7 @@ abstract class AppTransactions {
 		self::$recipientBalance += $amount;
 		
 		// Run the transaction
-		Database::query("INSERT INTO `credits_transactions` (`sender_auth_id`, `sender_uni_id`, `recipient_auth_id`, `recipient_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", array($senderAuthID, $senderUniID, $recipientAuthID, $recipientUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
+		Database::query("INSERT INTO `credits_transactions` (`sender_uni_id`, `recipient_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?, ?)", array($senderUniID, $recipientUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
 		
 		// Get the Transaction ID
 		if(!$transactionID = Database::$lastID)
@@ -140,7 +118,7 @@ abstract class AppTransactions {
 		}
 		
 		// Record the Transaction for the Sender
-		if(!$success = AppRecords::record($senderAuthID, $transactionID, true, self::$senderBalance))
+		if(!$success = AppRecords::record($senderUniID, $transactionID, true, self::$senderBalance))
 		{
 			self::$error = "Recording sender's transaction was unsuccessful.";
 			Database::endTransaction(false);
@@ -148,7 +126,7 @@ abstract class AppTransactions {
 		}
 		
 		// Record the Transaction for the Recipient
-		if(!$success = AppRecords::record($recipientAuthID, $transactionID, false, self::$recipientBalance))
+		if(!$success = AppRecords::record($recipientUniID, $transactionID, false, self::$recipientBalance))
 		{
 			self::$error = "Recording recipient's transaction was unsuccessful.";
 			Database::endTransaction(false);
@@ -165,19 +143,18 @@ abstract class AppTransactions {
 /****** The server grants credits to a user ******/
 	public static function add
 	(
-		$recipientAuthID	// <int> The Auth ID of the user receiving credits.
-	,	$recipientUniID		// <int> The Uni-Profile of the user receiving credits.
+		$recipientUniID		// <int> The Uni-Profile of the user receiving credits.
 	,	$amount				// <float> Sets how many credits to exchange.
 	,	$desc = ""			// <str> The description of the transaction, if applicable.
 	,	$siteHandle = ""	// <str> The site handle of the site responsible for this transaction.
 	)						// RETURNS <int> The Transaction ID, or 0 on failure.
 	
-	// $transactionID = AppTransactions::add($recipientAuthID, $recipientUniID, 2.50, "Received 2.50 from server.", $siteHandle);
+	// $transactionID = AppTransactions::add($recipientUniID, 2.50, "Received 2.50 from server.", $siteHandle);
 	{
 		self::reset();
 		
 		// Get the current amount (also confirms the user exists & creates the row)
-		$userBalance = AppCredits::getBalance($recipientAuthID);
+		$userBalance = AppCredits::getBalance($recipientUniID);
 		
 		if($userBalance === false)
 		{
@@ -187,7 +164,7 @@ abstract class AppTransactions {
 		// Add the credits - if not successful, return false
 		Database::startTransaction();
 		
-		if(!$success = Database::query("UPDATE credits SET amount=amount+? WHERE auth_id=? LIMIT 1", array($amount, $recipientAuthID)))
+		if(!$success = Database::query("UPDATE credits SET amount=amount+? WHERE uni_id=? LIMIT 1", array($amount, $recipientUniID)))
 		{
 			self::$error = "Couldn't process the transaction.";
 			Database::endTransaction(false);
@@ -198,7 +175,7 @@ abstract class AppTransactions {
 		self::$recipientBalance = $userBalance + $amount;
 		
 		// Run the transaction
-		Database::query("INSERT INTO `credits_transactions` (`recipient_auth_id`, `recipient_uni_id`, `amount`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?)", array($recipientAuthID, $recipientUniID, $amount, time(), $siteHandle, Sanitize::safeword($desc)));
+		Database::query("INSERT INTO `credits_transactions` (`recipient_uni_id`, `amount`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?)", array($recipientUniID, $amount, time(), $siteHandle, Sanitize::safeword($desc)));
 		
 		// Get the Transaction ID
 		if(!$transactionID = Database::$lastID)
@@ -209,7 +186,7 @@ abstract class AppTransactions {
 		}
 		
 		// Record the Transaction
-		if(!$success = AppRecords::record($recipientAuthID, $transactionID, false, self::$recipientBalance))
+		if(!$success = AppRecords::record($recipientUniID, $transactionID, false, self::$recipientBalance))
 		{
 			self::$error = "Recording transaction was unsuccessful.";
 			Database::endTransaction(false);
@@ -226,20 +203,19 @@ abstract class AppTransactions {
 /****** Subtract UniJoule from a User (to the Server) ******/
 	public static function subtract
 	(
-		$senderAuthID		// <int> The Auth ID of the user spending UniJoule.
-	,	$senderUniID		// <int> The UniID of the user spending UniJoule.
+		$senderUniID		// <int> The UniID of the user spending UniJoule.
 	,	$amount				// <float> Sets how many UniJoule to exchange.
 	,	$desc = ""			// <str> The description of the transaction, if applicable.
 	,	$siteHandle = ""	// <str> The site handle of the site responsible for this transaction.
 	,	$applyFee = true	// <bool> TRUE to apply a fee, FALSE to not apply a fee.
 	)						// RETURNS <int> The Transaction ID, or 0 on failure.
 	
-	// $transactionID = AppTransactions::subtract($senderAuthID, $senderUniID, 2.50, "Sent 2.50 to the server.", $siteHandle, [$applyFee], [$giftcardCode]);
+	// $transactionID = AppTransactions::subtract($senderUniID, 2.50, "Sent 2.50 to the server.", $siteHandle, [$applyFee], [$giftcardCode]);
 	{
 		self::reset();
 		
 		// Get the current amount (also confirms the user exists & creates the row)
-		self::$senderBalance = AppCredits::getBalance($senderAuthID);
+		self::$senderBalance = AppCredits::getBalance($senderUniID);
 		
 		if(self::$senderBalance === false)
 		{
@@ -264,7 +240,7 @@ abstract class AppTransactions {
 		// Subtract the credits - if not successful, return false
 		Database::startTransaction();
 		
-		if(!$success = Database::query("UPDATE credits SET amount=amount-? WHERE auth_id=? LIMIT 1", array(($amount + $fee), $senderAuthID)))
+		if(!$success = Database::query("UPDATE credits SET amount=amount-? WHERE uni_id=? LIMIT 1", array(($amount + $fee), $senderUniID)))
 		{
 			self::$error = "Couldn't process the transaction.";
 			Database::endTransaction(false);
@@ -275,7 +251,7 @@ abstract class AppTransactions {
 		self::$senderBalance -= ($amount + $fee);
 		
 		// Record the transaction
-		Database::query("INSERT INTO `credits_transactions` (`sender_auth_id`, `sender_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?, ?)", array($senderAuthID, $senderUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
+		Database::query("INSERT INTO `credits_transactions` (`sender_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?)", array($senderUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
 		
 		// Get the Transaction ID
 		if(!$transactionID = Database::$lastID)
@@ -286,7 +262,7 @@ abstract class AppTransactions {
 		}
 		
 		// Record the Transaction
-		if(!$success = AppRecords::record($senderAuthID, $transactionID, true, self::$senderBalance))
+		if(!$success = AppRecords::record($senderUniID, $transactionID, true, self::$senderBalance))
 		{
 			self::$error = "Recording transaction was unsuccessful.";
 			Database::endTransaction(false);
@@ -305,14 +281,13 @@ abstract class AppTransactions {
 	(
 		$giftcardCode		// <str> The code of the gift card being used.
 	,	$amount				// <float> Sets how many UniJoule to exchange.
-	,	$senderAuthID = 0	// <int> The Auth ID of the user spending UniJoule.
 	,	$senderUniID = 0	// <int> The UniID of the user spending UniJoule.
 	,	$desc = ""			// <str> The description of the transaction, if applicable.
 	,	$siteHandle = ""	// <str> The site handle of the site responsible for this transaction.
 	,	$applyFee = true	// <bool> TRUE to apply a fee, FALSE to not apply a fee.
 	)						// RETURNS <int> The Transaction ID, or 0 on failure.
 	
-	// $transactionID = AppTransactions::subtract($giftcardCode, $amount, $senderAuthID, $senderUniID, "Gift Card Purchase.", $siteHandle, [$applyFee]);
+	// $transactionID = AppTransactions::subtract($giftcardCode, $amount, $senderUniID, "Gift Card Purchase.", $siteHandle, [$applyFee]);
 	{
 		self::reset();
 		
@@ -341,12 +316,12 @@ abstract class AppTransactions {
 		}
 		
 		// Get the user's balance
-		self::$senderBalance = AppCredits::getBalance($senderAuthID);
+		self::$senderBalance = AppCredits::getBalance($senderUniID);
 		
 		// Subtract the UniJoule - if not successful, return false
 		Database::startTransaction();
 		
-		if(!$success = Database::query("UPDATE credits SET amount=amount-? WHERE auth_id=? LIMIT 1", array(($amount + $fee), $senderAuthID)))
+		if(!$success = Database::query("UPDATE credits SET amount=amount-? WHERE uni_id=? LIMIT 1", array(($amount + $fee), $senderUniID)))
 		{
 			self::$error = "Couldn't process the transaction.";
 			Database::endTransaction(false);
@@ -365,7 +340,7 @@ abstract class AppTransactions {
 		}
 		
 		// Record the transaction
-		Database::query("INSERT INTO `credits_transactions` (`sender_auth_id`, `sender_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?, ?)", array($senderAuthID, $senderUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
+		Database::query("INSERT INTO `credits_transactions` (`sender_uni_id`, `amount`, `fee`, `date_exchange`, `site_handle`, `description`) VALUES (?, ?, ?, ?, ?, ?)", array($senderUniID, $amount, $fee, time(), $siteHandle, Sanitize::safeword($desc)));
 		
 		// Get the Transaction ID
 		if(!$transactionID = Database::$lastID)
@@ -376,7 +351,7 @@ abstract class AppTransactions {
 		}
 		
 		// Record the Transaction
-		if(!$success = AppRecords::record($senderAuthID, $transactionID, true, self::$senderBalance))
+		if(!$success = AppRecords::record($senderUniID, $transactionID, true, self::$senderBalance))
 		{
 			self::$error = "Recording transaction was unsuccessful.";
 			Database::endTransaction(false);

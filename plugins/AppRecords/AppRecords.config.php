@@ -25,13 +25,13 @@ class AppRecords_config {
 		Database::exec("
 		CREATE TABLE IF NOT EXISTS `credits_records`
 		(
-			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			`uni_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`transaction_id`		int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`is_sender`				tinyint(1)		unsigned	NOT NULL	DEFAULT '0',
 			`running_total`			float(12,4)		unsigned	NOT NULL	DEFAULT '0.0000',
 			
-			INDEX (`auth_id`, `transaction_id`)
-		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 PARTITION BY KEY (`auth_id`) PARTITIONS 61;
+			INDEX (`uni_id`, `transaction_id`)
+		) ENGINE=InnoDB  DEFAULT CHARSET=utf8 PARTITION BY KEY (`uni_id`) PARTITIONS 61;
 		");
 		
 		return $this->isInstalled();
@@ -45,7 +45,7 @@ class AppRecords_config {
 	// $plugin->isInstalled();
 	{
 		// Make sure the newly installed tables exist
-		return DatabaseAdmin::columnsExist("credits_records", array("auth_id", "transaction_id"));
+		return DatabaseAdmin::columnsExist("credits_records", array("uni_id", "transaction_id"));
 	}
 	
 }

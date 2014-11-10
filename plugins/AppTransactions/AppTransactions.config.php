@@ -27,10 +27,7 @@ class AppTransactions_config {
 		(
 			`id`					int(10)			unsigned	NOT NULL	AUTO_INCREMENT,
 			
-			`sender_auth_id`		int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`sender_uni_id`			int(10)			unsigned	NOT NULL	DEFAULT '0',
-			
-			`recipient_auth_id`		int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`recipient_uni_id`		int(10)			unsigned	NOT NULL	DEFAULT '0',
 			
 			`amount`				float(12,4)					NOT NULL	DEFAULT '0.0000',

@@ -12,7 +12,7 @@ This plugin tracks a user's credits. Credits are the virtual unit of money withi
 -------------------------------
 
 // Get the current number of UniJoule of a User
-$balance = AppCredits::getBalance($authID);
+$balance = AppCredits::getBalance($uniID);
 
 // Get the current number of UniJoule available in a gift card
 $amount = AppCredits::getGiftCardBalance($giftcardCode);
@@ -33,19 +33,18 @@ abstract class AppCredits {
 /****** Check how many UniJoule a user has ******/
 	public static function getBalance
 	(
-		$authID		// <int> The Auth ID of the user to check the balance of.
-	)				// RETURNS <mixed> The amount of UniJoule the user has, FALSE on error.
+		$uniID		// <int> The UniID to check the balance of.
+	)				// RETURNS <mixed> The amount of UniJoule the UniID has, FALSE on error.
 	
-	// $amount = AppCredits::getBalance(Me::$vals['auth_id']);
+	// $amount = AppCredits::getBalance($uniID);
 	{
-		// Make sure the Auth ID is set
-		if($authID == 0) { return false; }
+		if($uniID == 0) { return false; }
 		
 		// Gather the credit data
-		if(!$fetchCredits = Database::selectOne("SELECT amount FROM credits WHERE auth_id=? LIMIT 1", array($authID)))
+		if(!$fetchCredits = Database::selectOne("SELECT amount FROM credits WHERE uni_id=? LIMIT 1", array($uniID)))
 		{
 			// If nothing was recovered, create the user's credits row
-			if(!$success = Database::query("INSERT IGNORE INTO credits (auth_id, amount) VALUES (?, ?)", array($authID, 0)))
+			if(!$success = Database::query("INSERT IGNORE INTO credits (uni_id, amount) VALUES (?, ?)", array($uniID, 0)))
 			{
 				return false;
 			}

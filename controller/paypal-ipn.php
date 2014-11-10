@@ -85,23 +85,16 @@ while (!feof($fp))
 			// If the user is purchasing a gift card
 			if($giftcardCode)
 			{
-				$chkAuthID = 0;
-				
-				if($uniID)
-				{
-					$chkAuthID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($uniID));
-				}
-				
 				Database::startTransaction();
 				
 				// Record the purchase
-				if($pass = Database::query("INSERT INTO `credit_purchases` (auth_id, uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", array($chkAuthID, $uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
+				if($pass = Database::query("INSERT INTO `credits_purchases` (uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?)", array($uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
 				{
 					// Make sure no other gift card has the same code
 					if(!Database::selectValue("SELECT giftcard_code FROM credits_giftcards WHERE giftcard_code=? LIMIT 1", array($giftcardCode)))
 					{
 						// Add a Gift Card
-						$pass = Database::query("INSERT INTO credits_giftcards (giftcard_code, auth_id, uni_id, credits, email, date_purchased) VALUES (?, ?, ?, ?, ?, ?)", array($giftcardCode, $chkAuthID, $uniID, $credits, $payer_email, time()));
+						$pass = Database::query("INSERT INTO credits_giftcards (giftcard_code, uni_id, credits, email, date_purchased) VALUES (?, ?, ?, ?, ?)", array($giftcardCode, $uniID, $credits, $payer_email, time()));
 					}
 					else
 					{
@@ -115,24 +108,21 @@ while (!feof($fp))
 			// If the user is adding UniJoule to their account
 			else if($uniID)
 			{
-				if($chkAuthID = (int) Database::selectValue("SELECT auth_id FROM users WHERE uni_id=? LIMIT 1", array($uniID)))
+				Database::startTransaction();
+				
+				// Record the purchase
+				if($pass = Database::query("INSERT INTO `credits_purchases` (uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?)", array($uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
 				{
-					Database::startTransaction();
+					// Add to the user's credits
+					$transactionID = AppTransactions::add($uniID, $credits, "Purchased Credits.");
 					
-					// Record the purchase
-					if($pass = Database::query("INSERT INTO `credit_purchases` (auth_id, uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", array($chkAuthID, $uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
+					if(AppTransactions::$recipientBalance == false)
 					{
-						// Add to the user's credits
-						$transactionID = AppTransactions::add($chkAuthID, $uniID, $credits, "Purchased Credits.");
-						
-						if(AppTransactions::$recipientBalance == false)
-						{
-							$pass = false;
-						}
+						$pass = false;
 					}
-					
-					Database::endTransaction($pass);
 				}
+				
+				Database::endTransaction($pass);
 			}
 		}
 		

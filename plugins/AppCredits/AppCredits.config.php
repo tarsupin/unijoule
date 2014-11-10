@@ -25,17 +25,16 @@ class AppCredits_config {
 		Database::exec("
 		CREATE TABLE IF NOT EXISTS `credits`
 		(
-			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
+			`uni_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`amount`				float(12,4)		unsigned	NOT NULL	DEFAULT '0.0000',
 			
-			UNIQUE (`auth_id`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (auth_id) PARTITIONS 7;
+			UNIQUE (`uni_id`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (uni_id) PARTITIONS 7;
 		");
 		
 		Database::exec("
-		CREATE TABLE IF NOT EXISTS `credit_purchases`
+		CREATE TABLE IF NOT EXISTS `credits_purchases`
 		(
-			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`uni_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			
 			`txn_id`				varchar(22)					NOT NULL	DEFAULT '',
@@ -47,16 +46,14 @@ class AppCredits_config {
 			
 			`date_paid`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			
-			INDEX (`auth_id`)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (auth_id) PARTITIONS 13;
+			INDEX (`uni_id`)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8 PARTITION BY KEY (uni_id) PARTITIONS 13;
 		");
 		
 		Database::exec("
 		CREATE TABLE IF NOT EXISTS `credits_giftcards`
 		(
 			`giftcard_code`			varchar(20)					NOT NULL	DEFAULT '',
-			
-			`auth_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			`uni_id`				int(10)			unsigned	NOT NULL	DEFAULT '0',
 			
 			`credits`				float(10,4)		unsigned	NOT NULL	DEFAULT '0.00',
@@ -65,7 +62,7 @@ class AppCredits_config {
 			`date_purchased`		int(10)			unsigned	NOT NULL	DEFAULT '0',
 			
 			UNIQUE (`giftcard_code`),
-			INDEX (`auth_id`)
+			INDEX (`uni_id`)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 		");
 		
@@ -80,10 +77,11 @@ class AppCredits_config {
 	// $plugin->isInstalled();
 	{
 		// Make sure the newly installed tables exist
-		$pass1 = DatabaseAdmin::columnsExist("credits", array("auth_id", "amount"));
-		$pass2 = DatabaseAdmin::columnsExist("credits_purchases", array("auth_id", "uni_id", "amount"));
+		$pass1 = DatabaseAdmin::columnsExist("credits", array("uni_id", "amount"));
+		$pass2 = DatabaseAdmin::columnsExist("credits_purchases", array("uni_id", "amount_paid"));
+		$pass3 = DatabaseAdmin::columnsExist("credits_giftcards", array("uni_id", "credits"));
 		
-		return ($pass1 and $pass2);
+		return ($pass1 and $pass2 and $pass3);
 	}
 	
 }

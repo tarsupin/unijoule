@@ -51,24 +51,45 @@ class ExchangeAPI extends API {
 		}
 		
 		// Sanitize Values
+		$senderID = (int) $this->data['sender_id'];
+		$recipientID = (int) $this->data['recipient_id'];
+		
 		$this->data['desc'] = isset($this->data['desc']) ? Sanitize::safeword($this->data['desc']) : '';
 		
-		// Check if the user is registered on this site
-		/*
-		if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($this->data['uni_id'])))
+		// Check if the sender is registered on this site
+		if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($senderID)))
 		{
-			if(!$userData = UserAuth::silentRegister((int) $this->data['uni_id']))
+			if(!User::silentRegister($senderID))
 			{
-				$this->alert = "That user could not be not located.";
+				$this->alert = "The sender could not be not located.";
 				return false;
 			}
 			
-			$this->data['uni_id'] = (int) $userData['uni_id'];
+			if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($senderID)))
+			{
+				$this->alert = "The sender could not be not located.";
+				return false;
+			}
 		}
-		*/
+		
+		// Check if the recipient is registered on this site
+		if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($recipientID)))
+		{
+			if(!User::silentRegister($recipientID))
+			{
+				$this->alert = "The recipient could not be not located.";
+				return false;
+			}
+			
+			if(!$check = Database::selectValue("SELECT uni_id FROM users WHERE uni_id=? LIMIT 1", array($recipientID)))
+			{
+				$this->alert = "The recipient could not be not located.";
+				return false;
+			}
+		}
 		
 		// Run the Exchange
-		$transactionID = AppTransactions::exchange((int) $this->data['sender_id'], (int) $this->data['recipient_id'], (float) $this->data['unijoule'], $this->data['desc'], $this->apiHandle);
+		$transactionID = AppTransactions::exchange($senderID, $recipientID, (float) $this->data['unijoule'], $this->data['desc'], $this->apiHandle);
 		
 		// Determine if there was an error or not - if so, set an alert
 		if(AppTransactions::$error !== "")

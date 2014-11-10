@@ -184,12 +184,12 @@ if(Form::submitted("trans-amount-unijoule") and $runTransaction)
 		{
 			if($giftcardCode)
 			{
-				$transactionID = AppTransactions::subtractFromGiftCard($giftcardCode, $amt, Me::$vals['auth_id'], Me::$id, "Gift Card Transaction", $trans['site'], $applyFee);
+				$transactionID = AppTransactions::subtractFromGiftCard($giftcardCode, $amt, Me::$id, "Gift Card Transaction", $trans['site'], $applyFee);
 			}
 			else
 			{
 				// If the transaction API ran successfully, we can run the transaction on this site
-				$transactionID = AppTransactions::subtract(Me::$vals['auth_id'], Me::$id, $amt, "Transaction", $trans['site'], $applyFee);
+				$transactionID = AppTransactions::subtract(Me::$id, $amt, "Transaction", $trans['site'], $applyFee);
 			}
 			
 			// Redirect back to the return URL

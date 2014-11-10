@@ -5,7 +5,7 @@ $balance = "0.00";
 // Get credit balance of the user
 if(Me::$loggedIn)
 {
-	$balance = AppCredits::getBalance(Me::$vals['auth_id']);
+	$balance = AppCredits::getBalance(Me::$id);
 }
 
 // Build Panel Navigation
@@ -51,7 +51,7 @@ $html = '
 		$_POST['desc'] = (isset($_POST['desc']) ? Sanitize::safeword($_POST['desc']) : "");
 		
 		$html .= '
-		<form id="send-credit-form" class="uniform" action="/" method="post">' . Form::prepare("send-credits-frmcrd") . '
+		<form id="send-credit-form" class="uniform" action="/my-account" method="post">' . Form::prepare("send-credits-frmcrd") . '
 			<input type="text" name="handle" value="' . $_POST['handle'] . '" placeholder="Their @handle" maxlength="22" />
 			<input type="text" name="joules" value="' . $_POST['joules'] . '" placeholder="Number of UniJoule" maxlength="8" />
 			<input type="text" name="desc" value="' . $_POST['desc'] . '" placeholder="Brief message . . ." maxlength="64" />

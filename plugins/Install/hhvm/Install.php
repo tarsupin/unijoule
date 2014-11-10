@@ -9,7 +9,6 @@ abstract class Install extends Installation {
 	// These addon plugins will be selected for installation during the "addon" installation process:
 	public static array <str, bool> $addonPlugins = array(	// <str:bool>
 		"Notifications"		=> true
-	,	"UserAuth"			=> true
 	);
 	
 	
