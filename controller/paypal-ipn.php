@@ -8,13 +8,15 @@ $payment_status		= Sanitize::variable($_POST['payment_status']);
 $payment_amount		= (float) $_POST['mc_gross'];
 $payment_currency	= Sanitize::variable($_POST['mc_currency']);
 $txn_id				= Sanitize::variable($_POST['txn_id']);
-$receiver_email		= Sanitize::email($_POST['receiver_email']);
-$payer_email		= Sanitize::email($_POST['payer_email']);
+$receiver_email		= Sanitize::variable($_POST['receiver_email'], "+-@.");
+$payer_email		= Sanitize::variable($_POST['payer_email'], "+-@.");
 $custom				= json_decode($_POST['custom'], true);
 
 // Prepare Values
-$uniID = (isset($custom['uni_id']) ? (int) $custom['uni_id'] : 0);
+$uniID = (isset($custom['uni_id']) ? (int) $custom['uni_id'] : 0);	// {"uni_id":1}
 $giftcardCode = "";
+
+$debugValue = mt_rand(0, 50);
 
 // Prepare the Gift Card
 if(isset($custom['type']) and isset($custom['code']) and $custom['type'] == "giftcard")
@@ -42,7 +44,7 @@ $fp = fsockopen('ssl://www.sandbox.paypal.com', 443, $errno, $errstr, 30);
 
 // Send the HTTP POST request back to PayPal for validation
 fputs($fp, $header . $req);
-
+Debug::file($debugValue . "a", json_encode($_POST));
 while (!feof($fp))
 {
 	// While not EOF
@@ -53,7 +55,7 @@ while (!feof($fp))
 	{
 		// Can check for txn_type here.
 		// https://developer.paypal.com/docs/classic/ipn/integration-guide/IPNandPDTVariables/
-		
+		Debug::file($debugValue . "b", json_encode(array($uniID, $giftcardCode, $txn_id, $payment_status, $payment_amount)));
 		// Check that the payment_status is Completed
 		if($payment_status == "Completed")
 		{
@@ -109,10 +111,11 @@ while (!feof($fp))
 			else if($uniID)
 			{
 				Database::startTransaction();
-				
+				$track1 = "not here";
 				// Record the purchase
 				if($pass = Database::query("INSERT INTO `credits_purchases` (uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?)", array($uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
 				{
+					$track1 = (string) $pass;
 					// Add to the user's credits
 					$transactionID = AppTransactions::add($uniID, $credits, "Purchased Credits.");
 					
@@ -121,7 +124,7 @@ while (!feof($fp))
 						$pass = false;
 					}
 				}
-				
+				Debug::file($debugValue . "c", json_encode(array($uniID, $track1, $transactionID)));
 				Database::endTransaction($pass);
 			}
 		}
