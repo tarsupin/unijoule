@@ -49,7 +49,7 @@ while (!feof($fp))
 {
 	// While not EOF
 	$res = fgets($fp, 1024);	// Get the acknowledgement response
-	
+	Debug::file($debugValue . "res" . mt_rand(0, 10), json_encode(array($res)));
 	// Response was valid, proceed with payment processing successful
 	if(strcmp ($res, "VERIFIED") == 0)
 	{

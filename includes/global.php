@@ -77,3 +77,22 @@ function showCreditForm()
 </script>';
 
 WidgetLoader::add("SidePanel", 15, $html);
+
+// Set the active user to yourself
+if(Me::$loggedIn)
+{
+	You::$id = Me::$id;
+	You::$handle = Me::$vals['handle'];
+}
+
+// Load the Social Menu
+require(SYS_PATH . "/controller/includes/social-menu.php");
+
+// UniFaction Dropdown Menu
+WidgetLoader::add("UniFactionMenu", 10, '
+<div class="menu-wrap hide-600">
+	<ul class="menu">
+		' . (isset($uniMenu) ? $uniMenu : '') . '
+		<li class="menu-slot' . ($url[0] == "get-unijoules" ? " menu-active" : "") . '"><a href="/get-unijoules">Get UniJoule</a></li><li class="menu-slot' . ($url[0] == "get-giftcard" ? " menu-active" : "") . '"><a href="/get-giftcard">Get a Gift Card</a></li>
+	</ul>
+</div>');
