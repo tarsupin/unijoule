@@ -40,7 +40,7 @@ $header .= "Content-Type: application/x-www-form-urlencoded\r\n";
 $header .= "Content-Length: " . strlen($req) . "\r\n\r\n";
 
 // Open a socket for the acknowledgement request
-$fp = fsockopen('ssl://www.sandbox.paypal.com', 443, $errno, $errstr, 30);
+$fp = fsockopen('ssl://www.paypal.com', 443, $errno, $errstr, 30);
 
 // Send the HTTP POST request back to PayPal for validation
 fputs($fp, $header . $req);
@@ -49,7 +49,7 @@ while (!feof($fp))
 {
 	// While not EOF
 	$res = fgets($fp, 1024);	// Get the acknowledgement response
-	Debug::file($debugValue . "res" . mt_rand(0, 10), json_encode(array($res)));
+	
 	// Response was valid, proceed with payment processing successful
 	if(strcmp ($res, "VERIFIED") == 0)
 	{
