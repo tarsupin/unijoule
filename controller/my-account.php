@@ -126,8 +126,12 @@ echo '
 	tr:nth-child(odd) { background-color:#f8f8f7; }
 	
 	.desc { max-width:120px; }
-</style>
+</style>';
 
+echo '
+<div style="margin-bottom:10px;">You currently have <span style="font-weight:bold; color:#773030;">' . number_format($balance, 2) . '</span> UniJoule.</div>';
+
+echo '
 <h3>Transactions</h3>
 
 <table border="0" cellpadding="0" cellspacing="0">
