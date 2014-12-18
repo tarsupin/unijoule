@@ -12,6 +12,9 @@ require(APP_PATH . "/includes/global.php");
 // Prepare the custom value
 $customStr = json_encode(array("uni_id" => Me::$id));
 
+// Temporary Alert for UniJoule issues
+Alert::info("Potential Issues", 'If you encounter any issues, please <a href="' . URL::inbox_unifaction_com() . '/to/Brint' . Me::$slg . '">Send a message to Brint</a> for help.');
+
 // Display the Header
 require(SYS_PATH . "/controller/includes/metaheader.php");
 require(SYS_PATH . "/controller/includes/header.php");

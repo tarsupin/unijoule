@@ -16,7 +16,7 @@ $custom				= json_decode($_POST['custom'], true);
 $uniID = (isset($custom['uni_id']) ? (int) $custom['uni_id'] : 0);	// {"uni_id":1}
 $giftcardCode = "";
 
-$debugValue = mt_rand(0, 50);
+$debugValue = ($uniID . "_" . time();
 
 // Prepare the Gift Card
 if(isset($custom['type']) and isset($custom['code']) and $custom['type'] == "giftcard")
@@ -111,11 +111,11 @@ while (!feof($fp))
 			else if($uniID)
 			{
 				Database::startTransaction();
-				$track1 = "not here";
+				$track1 = "CHECK FAILURE HERE";
 				// Record the purchase
 				if($pass = Database::query("INSERT INTO `credits_purchases` (uni_id, txn_id, payment_status, email, amount_paid, date_paid, credits_provided) VALUES (?, ?, ?, ?, ?, ?, ?)", array($uniID, $txn_id, $payment_status, $payer_email, $payment_amount, time(), $credits)))
 				{
-					$track1 = (string) $pass;
+					$track1 = ":)";
 					// Add to the user's credits
 					$transactionID = AppTransactions::add($uniID, $credits, "Purchased Credits.");
 					

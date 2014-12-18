@@ -51,7 +51,7 @@ if(Form::submitted("send-credits-frmcrd"))
 	if(FormValidate::pass())
 	{
 		// Exchange the UniJoule
-		AppTransactions::exchange(Me::$id, $userData['uni_id'], $_POST['joules'], "Sent UniJoules to " . $userData['handle']);
+		AppTransactions::exchange(Me::$id, (int) $userData['uni_id'], $_POST['joules'], "Sent UniJoules to " . $userData['handle']);
 		
 		if(AppTransactions::$error)
 		{
