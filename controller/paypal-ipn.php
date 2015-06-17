@@ -16,7 +16,7 @@ $custom				= json_decode($_POST['custom'], true);
 $uniID = (isset($custom['uni_id']) ? (int) $custom['uni_id'] : 0);	// {"uni_id":1}
 $giftcardCode = "";
 
-$debugValue = ($uniID . "_" . time();
+$debugValue = ($uniID . "_" . time());
 
 // Prepare the Gift Card
 if(isset($custom['type']) and isset($custom['code']) and $custom['type'] == "giftcard")

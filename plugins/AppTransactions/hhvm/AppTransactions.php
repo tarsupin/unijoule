@@ -21,9 +21,14 @@ abstract class AppTransactions {
 /****** Plugin Variables ******/
 	
 	// Plugin Values
+	/*
 	public static float $feeBase = 0.0034;	// <float> The base fee (1/3rd of a penny)
 	public static float $feeMult = 0.017;		// <float> The multiplier (percentage) to apply to fees for each transaction.
 	public static float $feeMax = 0.34;		// <float> The maximum fee (34 cents)
+	*/
+	public static float $feeBase = 0.0000;	// <float> The base fee (1/3rd of a penny)
+	public static float $feeMult = 0.000;		// <float> The multiplier (percentage) to apply to fees for each transaction.
+	public static float $feeMax = 0.00;		// <float> The maximum fee (34 cents)
 	
 	// Transaction Values
 	public static string $error = "";				// <str> The error associated with this transaction, if applicable.
